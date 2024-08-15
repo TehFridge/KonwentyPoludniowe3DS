@@ -41,8 +41,10 @@ function love.load()
 	--font = love.graphics.newFont("anyfont.otf", 8)
 	MOVE_PAGE = -20
 	kurwacoto_jest = 1
+	mode_sel = 1
 	additional_offset = 1
 	state = "title_screen"
+	rel_offset = 0
 	selection = 1
 	conurl = 1
 	conselection = 1
@@ -130,12 +132,33 @@ function draw_top_screen(dt)
 			draw_widget(news3, BASE_PARAGRAPH_POS + (BASE_GAP * 2) - REC_GAP, false)
 		end
 		TextDraw.DrawTextCentered(date3, SCREEN_WIDTH/2, BASE_PARAGRAPH_POS + ADD_PARAGRAPH_POS + (BASE_GAP * 2), {0.72, 0.63, 0.81, 1}, font, PARAGRAPH_SCALE)
+	elseif state == "relacje" then
+		--TextDraw.DrawTextCentered(parseurl(tree("h2")[1]:gettext()), SCREEN_WIDTH/2, 40, {1, 1, 1, 1}, font, 1) 
+		TextDraw.DrawTextCentered("Relacje z Konwentów", SCREEN_WIDTH/2, 40, {1, 1, 1, 1}, font, HEADLINE_SCALE)
+		if kurwacoto_jest == 1 then
+			draw_widget(rel1, BASE_PARAGRAPH_POS - REC_GAP, true)
+		else
+			draw_widget(rel1, BASE_PARAGRAPH_POS - REC_GAP, false)
+		end
+		TextDraw.DrawTextCentered(date1, SCREEN_WIDTH/2, BASE_PARAGRAPH_POS + ADD_PARAGRAPH_POS, {0.72, 0.63, 0.81, 1}, font, PARAGRAPH_SCALE)
+		if kurwacoto_jest == 2 then
+			draw_widget(rel2, BASE_PARAGRAPH_POS + BASE_GAP - REC_GAP, true)
+		else
+			draw_widget(rel2, BASE_PARAGRAPH_POS + BASE_GAP - REC_GAP, false)
+		end
+		TextDraw.DrawTextCentered(date2, SCREEN_WIDTH/2, BASE_PARAGRAPH_POS + ADD_PARAGRAPH_POS + BASE_GAP, {0.72, 0.63, 0.81, 1}, font, PARAGRAPH_SCALE)
+		if kurwacoto_jest == 3 then
+			draw_widget(rel3, BASE_PARAGRAPH_POS + (BASE_GAP * 2) - REC_GAP, true)
+		else
+			draw_widget(rel3, BASE_PARAGRAPH_POS + (BASE_GAP * 2) - REC_GAP, false)
+		end
+		TextDraw.DrawTextCentered(date3, SCREEN_WIDTH/2, BASE_PARAGRAPH_POS + ADD_PARAGRAPH_POS + (BASE_GAP * 2), {0.72, 0.63, 0.81, 1}, font, PARAGRAPH_SCALE)
 	elseif state == "article" then
 		if MOVE_PAGE >= -24 then
 			DrawRectangle(-20, SCREEN_WIDTH + 10, {0.26, 0.14, 0.31, 1}, (TextDraw.GetTextHeight(pagetitle, font, 1.3) * 4.3), false, 0)
 			TextDraw.DrawTextCentered(pagetitle, SCREEN_WIDTH/2, 10, {1, 1, 1, 1}, font, 1.3)
 		end
-		TextDraw.DrawTextCentered(ART_PARS, SCREEN_WIDTH/2, BASE_PARAGRAPH_POS + MOVE_PAGE, {1, 1, 1, 1}, font, 1)
+		TextDraw.DrawText(ART_PARS, 0, BASE_PARAGRAPH_POS + MOVE_PAGE, {1, 1, 1, 1}, font, 1)
 	elseif state == "con_info" then
 		TextDraw.DrawTextCentered(tree("#event-hdr")[1]:getcontent(), SCREEN_WIDTH/2, 40, {1, 1, 1, 1}, font, 1.2)
 		TextDraw.DrawTextCentered(tree("#conv-date")[1]:getcontent(), SCREEN_WIDTH/2, 80, {1, 1, 1, 1}, font, 1)
@@ -160,7 +183,11 @@ end
 function draw_bottom_screen(dt)
 	DrawRectangle(0, 400, {0.113,0.062,0.133, 1}, 240, true)
 	TextDraw.DrawTextCentered("Y - Nadchodzące Konwenty", 320/2, 40, {1, 1, 1, 1}, font, 1)
-	TextDraw.DrawTextCentered("B - Strona Główna", 320/2, 60, {1, 1, 1, 1}, font, 1)
+	if mode_sel == 1 then 
+		TextDraw.DrawTextCentered("B - Aktualności", 320/2, 60, {1, 1, 1, 1}, font, 1)
+	elseif mode_sel == 2 then
+		TextDraw.DrawTextCentered("B - Relacje z Konwentów (WiP)", 320/2, 60, {1, 1, 1, 1}, font, 1)
+	end
 	if state == "article" then
 		TextDraw.DrawTextCentered("DPad Góra/Dół - Scrolluj treść", 320/2, 80, {1, 1, 1, 1}, font, 1)
 	else 
@@ -171,11 +198,19 @@ function draw_bottom_screen(dt)
 		TextDraw.DrawTextCentered("X - Załaduj Cały Opis", 320/2, 120, {1, 1, 1, 1}, font, 1)
 	end
 	TextDraw.DrawTextCentered("Start - Zamknij Aplikacje", 320/2, 200, {1, 1, 1, 1}, font, 1)
+	TextDraw.DrawTextCentered("Select - Aktualności/Relacje", 320/2, 140, {1, 1, 1, 1}, font, 1)
+end
+local function extract_p_tags(html)
+    local paragraphs = {}
+    for p in html:gmatch("<p>(.-)</p>") do
+        table.insert(paragraphs, "<p>" .. p .. "</p>")
+    end
+    return table.concat(paragraphs, "\n")
 end
 function parsearticle(xml_to_parse)
 	local str = xml_to_parse
 	
-	local output = str:gsub("<br/>", ""):gsub("<p>", ""):gsub("</p>", " "):gsub("<", ""):gsub("strong", ""):gsub("a href=[^>]+", ""):gsub("&amp;", ""):gsub("%(", ""):gsub("%)", ""):gsub("&nbsp;", " "):gsub("/%a", ""):gsub("%a/", ""):gsub("/", ""):gsub(">", "")
+	local output = extract_p_tags(str):gsub("<br/>", ""):gsub("<noscript>", ""):gsub("</noscript>", ""):gsub("<img.-/>", ""):gsub("<p>", ""):gsub("</p>", " "):gsub("<", ""):gsub("strong", ""):gsub("a href=[^>]+", ""):gsub("&amp;", ""):gsub("%(", ""):gsub("%)", ""):gsub("&nbsp;", " "):gsub("/%a", ""):gsub("%a/", ""):gsub("/", ""):gsub(">", "")
 	
 	return output
 end
@@ -200,7 +235,6 @@ function gotopage(reference)
 end
 
 function refresh_data(url)
-	state = "loading"
     -- Headers
     -- local myheaders = {
         -- ["user-agent"] = "Mozilla/5.0 (Windows NT 10.0; rv:129.0) Gecko/20100101 Firefox/129.0",
@@ -231,14 +265,30 @@ function refresh_data(url)
 end
 function loadarticle()
 	pagetitle = TextDraw.GetWrappedText((tree(".page-header h1 a")[1]:getcontent()), font, SCREEN_WIDTH, 1.3)
-	ART_PARS = TextDraw.GetWrappedText(parsearticle(tree(".content p")[1]:getcontent() .. " " .. tree("p")[3]:getcontent().. " " .. tree("p")[4]:getcontent()), font, SCREEN_WIDTH, 1)
+	--love.filesystem.write("chuj.txt", parsearticle(tree(".content")[1]:getcontent()))
+	ART_PARS = TextDraw.GetWrappedText(parsearticle(tree(".content")[1]:getcontent()), font, SCREEN_WIDTH, 1)
+end
+function update_re_re_kurwa_jak_jest_relacja_po_angielsku()
+	rel1 = limitchar(tree(".page-header h2 a")[additional_offset]:getcontent())
+	date1 = tree(".published")[additional_offset]:getcontent()
+	rel2 = limitchar(tree(".page-header h2 a")[additional_offset + 1]:getcontent())
+	date2 = tree(".published")[additional_offset + 1]:getcontent()
+	rel3 = limitchar(tree(".page-header h2 a")[additional_offset + 2]:getcontent())
+	date3 = tree(".published")[additional_offset + 2]:getcontent()
+end
+function limitchar(str)
+	if str:len() > 79 then
+		return string.sub(str, 1, 79) .. "..."
+	else
+		return str
+	end
 end
 function update_news()
-	news1 = tree(".item-title a")[additional_offset]:getcontent()
+	news1 = limitchar(tree(".item-title a")[additional_offset]:getcontent())
 	date1 = tree(".published")[additional_offset]:getcontent()
-	news2 = tree(".item-title a")[additional_offset + 1]:getcontent()
+	news2 = limitchar(tree(".item-title a")[additional_offset + 1]:getcontent())
 	date2 = tree(".published")[additional_offset + 1]:getcontent()
-	news3 = tree(".item-title a")[additional_offset + 2]:getcontent()
+	news3 = limitchar(tree(".item-title a")[additional_offset + 2]:getcontent())
 	date3 = tree(".published")[additional_offset + 2]:getcontent()
 end		
 function love.draw(screen)
@@ -251,9 +301,15 @@ end
 
 function love.gamepadpressed(joystick, button)
 	if button == "b" then
-		refresh_data("https://konwenty-poludniowe.pl")
-		update_news()
-		state = "main_strona"
+		if mode_sel == 1 then 
+			refresh_data("https://konwenty-poludniowe.pl")
+			update_news()
+			state = "main_strona"
+		else
+			refresh_data("https://konwenty-poludniowe.pl/konwenty/relacje-z-konwentow?start=" .. rel_offset)
+			update_re_re_kurwa_jak_jest_relacja_po_angielsku()
+			state = "relacje"
+		end
 	end
 	if button == "y" then
 		refresh_data("https://konwenty-poludniowe.pl/konwenty/kalendarz")
@@ -285,6 +341,17 @@ function love.gamepadpressed(joystick, button)
 					conselection = conselection + 1
 					conurl = conurl + 2
 				end
+			elseif state == "relacje" then
+				if selection < 9 then
+					selection = selection + 1 
+					if kurwacoto_jest > 2 then
+						kurwacoto_jest = 1
+						additional_offset = additional_offset + 3
+						update_re_re_kurwa_jak_jest_relacja_po_angielsku()
+					else
+						kurwacoto_jest = kurwacoto_jest + 1
+					end
+				end
 			end
 		elseif button == "dpup" then
 		    if state == "main_strona" then
@@ -304,6 +371,19 @@ function love.gamepadpressed(joystick, button)
 					conselection = conselection - 1
 					conurl = conurl - 2
 				end
+			
+		    elseif state == "relacje" then
+				if selection > 1 then
+					selection = selection - 1 
+					if kurwacoto_jest < 2 then
+						selection = selection - 2
+						additional_offset = additional_offset - 3
+						update_re_re_kurwa_jak_jest_relacja_po_angielsku()
+						kurwacoto_jest = 1
+					else
+						kurwacoto_jest = kurwacoto_jest - 1
+					end
+				end
 			end
 		end
 		if button == "a" then
@@ -316,6 +396,10 @@ function love.gamepadpressed(joystick, button)
 				cut_eventdesc = tree(".event_description p")[1]:getcontent()
 				event_desc = parsearticle(tree(".event_description")[1]:getcontent())
 				state = "con_info"
+			elseif state == "relacje" then
+				gotopage(parseurl(tree(".page-header h2 a")[selection]:gettext()))
+				loadarticle()
+				state = "article"
 			end
 		end
 		if button == "x" then
@@ -323,21 +407,28 @@ function love.gamepadpressed(joystick, button)
 				state = "con_desc"
 			end
 		end
-		if state == "main_strona" then
+		if state == "relacje" then
 			if button == "leftshoulder" then
 				if additional_offset ~= 0 then
-					selection = selection - 3
-					additional_offset = additional_offset - 3
-					update_news()
+					rel_offset = rel_offset - 9
+					refresh_data("https://konwenty-poludniowe.pl/konwenty/relacje-z-konwentow?start=" .. rel_offset)
+					update_re_re_kurwa_jak_jest_relacja_po_angielsku()
 				end
 			elseif button == "rightshoulder" then
-				selection = selection + 3
-				additional_offset = additional_offset + 3
-				update_news()
+				rel_offset = rel_offset + 9
+				refresh_data("https://konwenty-poludniowe.pl/konwenty/relacje-z-konwentow?start=" .. rel_offset)
+				update_re_re_kurwa_jak_jest_relacja_po_angielsku()
 			end
 		end
 		if button == "start" then
 			love.event.quit()
+		end
+		if button == "back" then 
+			if mode_sel > 1 then
+				mode_sel = 1
+			else
+				mode_sel = mode_sel + 1
+			end
 		end
 	end
 end
