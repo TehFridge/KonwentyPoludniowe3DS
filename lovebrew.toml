@@ -9,7 +9,7 @@
 title = "KonwentyPołudniowe3DS"
 author = "TehFridge"
 description = "Jaki konwent wariacie?"
-version = "1.0.0"
+version = "1.1.0"
 icons = { ctr = "icon.png", hac = "icon.jpg"}
 
 ## --- Build Options --- ##
