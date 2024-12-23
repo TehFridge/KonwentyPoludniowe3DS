@@ -1,9 +1,14 @@
 -- main.lua
 require "lib.text-draw"
+font =  love.graphics.newFont(12, "normal", 4) 
+local json = require("lib.json")
 local https = require("https")
 local ltn12 = require("ltn12")
 local htmlparser = require("htmlparser")
 local logo = love.graphics.newImage("assets/logo.png")
+local bg = love.graphics.newImage("assets/bg.png")
+local bgx = -120
+local bgy = -180
 if love._potion_version == nil then
 	local nest = require("nest").init({ console = "3ds", scale = 1 })
 	love._nest = true
@@ -17,12 +22,19 @@ if love._console == "3DS" then
 	LOGO_TEXT_OFFSET = 70
 	HEADLINE_SCALE = 2.1
 	PARAGRAPH_SCALE = 0.9
-	BASE_PARAGRAPH_POS = 80
+	BASE_PARAGRAPH_POS = 50
 	ADD_PARAGRAPH_POS = 15
+	ART_TITLE = 1.35
+	ART_CONTEXTKURWANWM = 1.1
 	BASE_GAP = 35
 	RECTANGLE_HEIGHT = 32
 	REC_GAP = 0
-	player_speed = 25
+	CONLST_GAP = 20
+	CONLST_BASE = 80
+	CONLST_NAME_S = 1.4
+	CONLST_NAME_DUNNO = 0
+	BG_S = 0.5
+	player_speed = 140
 elseif love._console == "Switch" then
 	SCREEN_WIDTH = 1280
 	SCREEN_HEIGHT = 720
@@ -30,11 +42,19 @@ elseif love._console == "Switch" then
 	LOGO_TEXT_OFFSET = 130
 	HEADLINE_SCALE = 3
 	PARAGRAPH_SCALE = 2.2
-	BASE_PARAGRAPH_POS = 130
+	BASE_PARAGRAPH_POS = 80
 	ADD_PARAGRAPH_POS = 30
+	ART_TITLE = 2
+	ART_CONTEXTKURWANWM = 1.8
 	BASE_GAP = 100
 	RECTANGLE_HEIGHT = 95
 	REC_GAP = 8
+	CONLST_GAP = 70
+	CONLST_BASE = 130
+	CONLST_NAME_S = 2.5
+	CONLST_NAME_DUNNO = 20
+	BG_S = 1.5
+	player_speed = 140
 end
 
 function love.load()	
@@ -48,61 +68,64 @@ function love.load()
 	selection = 1
 	conurl = 1
 	conselection = 1
+	refresh_data("https://konwenty-poludniowe.pl")
+	REFRESHED = 1
 end
 function draw_top_screen(dt)
 	DrawRectangle(0, SCREEN_WIDTH, {0.06, 0.06, 0.06, 1}, SCREEN_HEIGHT, true)
+	love.graphics.draw(bg, bgx, bgy, 0, BG_S, BG_S)
 	if state == "lista_kon" then
 		--love.graphics.print(tree, 10, 10)
 		--love.graphics.print(header2, 10, 20)
-		TextDraw.DrawTextCentered("Nadchodzące Wydarzenia", SCREEN_WIDTH/2, 40, {1, 1, 1, 1}, font, 2.1)
+		TextDraw.DrawTextCentered("Nadchodzące Wydarzenia", SCREEN_WIDTH/2, 40, {1, 1, 1, 1}, font, HEADLINE_SCALE)
 		if conselection == 1 then
-			DrawRectangle(80, SCREEN_WIDTH, {0.35, 0.35, 0.35, 1}, 20.5, false, 5)
-			TextDraw.DrawTextCentered(con1, SCREEN_WIDTH/2, 80, {0.28, 0.22, 0.34, 1}, font, 1.4)
+			DrawRectangle(CONLST_BASE, SCREEN_WIDTH, {0.35, 0.35, 0.35, 1}, CONLST_GAP * 0.97, false, 5)
+			TextDraw.DrawTextCentered(con1, SCREEN_WIDTH/2, CONLST_BASE + CONLST_NAME_DUNNO, {0.28, 0.22, 0.34, 1}, font, CONLST_NAME_S)
 		else
-			DrawRectangle(80, SCREEN_WIDTH, {0.14, 0.14, 0.14, 1}, 20.5, false, 5)
-			TextDraw.DrawTextCentered(con1, SCREEN_WIDTH/2, 80, {0.72, 0.63, 0.81, 1}, font, 1.4)
+			DrawRectangle(CONLST_BASE, SCREEN_WIDTH, {0.14, 0.14, 0.14, 1}, CONLST_GAP * 0.97, false, 5)
+			TextDraw.DrawTextCentered(con1, SCREEN_WIDTH/2, CONLST_BASE + CONLST_NAME_DUNNO, {0.72, 0.63, 0.81, 1}, font, CONLST_NAME_S)
 		end
 		if conselection == 2 then
-			DrawRectangle(100, SCREEN_WIDTH, {0.35, 0.35, 0.35, 1}, 20.5, false, 5)
-			TextDraw.DrawTextCentered(con2, SCREEN_WIDTH/2, 100, {0.28, 0.22, 0.34, 1}, font, 1.4)
+			DrawRectangle(CONLST_BASE + CONLST_GAP, SCREEN_WIDTH, {0.35, 0.35, 0.35, 1}, CONLST_GAP * 0.97, false, 5)
+			TextDraw.DrawTextCentered(con2, SCREEN_WIDTH/2, CONLST_BASE + CONLST_NAME_DUNNO + CONLST_GAP, {0.28, 0.22, 0.34, 1}, font, CONLST_NAME_S)
 		else	
-			DrawRectangle(100, SCREEN_WIDTH, {0.14, 0.14, 0.14, 1}, 20.5, false, 5)
-			TextDraw.DrawTextCentered(con2, SCREEN_WIDTH/2, 100, {0.72, 0.63, 0.81, 1}, font, 1.4)
+			DrawRectangle(CONLST_BASE + CONLST_GAP, SCREEN_WIDTH, {0.14, 0.14, 0.14, 1}, CONLST_GAP * 0.97, false, 5)
+			TextDraw.DrawTextCentered(con2, SCREEN_WIDTH/2, CONLST_BASE + CONLST_NAME_DUNNO + CONLST_GAP, {0.72, 0.63, 0.81, 1}, font, CONLST_NAME_S)
 		end
 		if conselection == 3 then
-			DrawRectangle(120, SCREEN_WIDTH, {0.35, 0.35, 0.35, 1}, 20.5, false, 5)
-			TextDraw.DrawTextCentered(con3, SCREEN_WIDTH/2, 120,{0.28, 0.22, 0.34, 1}, font, 1.4)
+			DrawRectangle(CONLST_BASE + CONLST_GAP * 2, SCREEN_WIDTH, {0.35, 0.35, 0.35, 1}, CONLST_GAP * 0.97, false, 5)
+			TextDraw.DrawTextCentered(con3, SCREEN_WIDTH/2, CONLST_BASE + CONLST_NAME_DUNNO + CONLST_GAP * 2,{0.28, 0.22, 0.34, 1}, font, CONLST_NAME_S)
 		else
-			DrawRectangle(120, SCREEN_WIDTH, {0.14, 0.14, 0.14, 1}, 20.5, false, 5)
-			TextDraw.DrawTextCentered(con3, SCREEN_WIDTH/2, 120, {0.72, 0.63, 0.81, 1}, font, 1.4)
+			DrawRectangle(CONLST_BASE + CONLST_GAP * 2, SCREEN_WIDTH, {0.14, 0.14, 0.14, 1}, CONLST_GAP * 0.97, false, 5)
+			TextDraw.DrawTextCentered(con3, SCREEN_WIDTH/2, CONLST_BASE + CONLST_NAME_DUNNO + CONLST_GAP * 2, {0.72, 0.63, 0.81, 1}, font, CONLST_NAME_S)
 		end
 		if conselection == 4 then
-			DrawRectangle(140, SCREEN_WIDTH, {0.35, 0.35, 0.35, 1}, 20.5, false, 5)
-			TextDraw.DrawTextCentered(con4, SCREEN_WIDTH/2, 140, {0.28, 0.22, 0.34, 1}, font, 1.4)
+			DrawRectangle(CONLST_BASE + CONLST_GAP * 3, SCREEN_WIDTH, {0.35, 0.35, 0.35, 1}, CONLST_GAP * 0.97, false, 5)
+			TextDraw.DrawTextCentered(con4, SCREEN_WIDTH/2, CONLST_BASE + CONLST_NAME_DUNNO + CONLST_GAP * 3, {0.28, 0.22, 0.34, 1}, font, CONLST_NAME_S)
 		else
-			DrawRectangle(140, SCREEN_WIDTH, {0.14, 0.14, 0.14, 1}, 20.5, false, 5)
-		    TextDraw.DrawTextCentered(con4, SCREEN_WIDTH/2, 140, {0.72, 0.63, 0.81, 1}, font, 1.4)
+			DrawRectangle(CONLST_BASE + CONLST_GAP * 3, SCREEN_WIDTH, {0.14, 0.14, 0.14, 1}, CONLST_GAP * 0.97, false, 5)
+		    TextDraw.DrawTextCentered(con4, SCREEN_WIDTH/2, CONLST_BASE + CONLST_NAME_DUNNO + CONLST_GAP * 3, {0.72, 0.63, 0.81, 1}, font, CONLST_NAME_S)
 		end
 		if conselection == 5 then
-			DrawRectangle(160, SCREEN_WIDTH, {0.35, 0.35, 0.35, 1}, 20.5, false, 5)
-			TextDraw.DrawTextCentered(con5, SCREEN_WIDTH/2, 160, {0.28, 0.22, 0.34, 1}, font, 1.4)
+			DrawRectangle(CONLST_BASE + CONLST_GAP * 4, SCREEN_WIDTH, {0.35, 0.35, 0.35, 1}, CONLST_GAP * 0.97, false, 5)
+			TextDraw.DrawTextCentered(con5, SCREEN_WIDTH/2, CONLST_BASE + CONLST_NAME_DUNNO + CONLST_GAP * 4, {0.28, 0.22, 0.34, 1}, font, CONLST_NAME_S)
 		else
-			DrawRectangle(160, SCREEN_WIDTH, {0.14, 0.14, 0.14, 1}, 20.5, false, 5)
-			TextDraw.DrawTextCentered(con5, SCREEN_WIDTH/2, 160, {0.72, 0.63, 0.81, 1}, font, 1.4)
+			DrawRectangle(CONLST_BASE + CONLST_GAP * 4, SCREEN_WIDTH, {0.14, 0.14, 0.14, 1}, CONLST_GAP * 0.97, false, 5)
+			TextDraw.DrawTextCentered(con5, SCREEN_WIDTH/2, CONLST_BASE + CONLST_NAME_DUNNO + CONLST_GAP * 4, {0.72, 0.63, 0.81, 1}, font, CONLST_NAME_S)
 	    end
 		if conselection == 6 then
-			DrawRectangle(180, SCREEN_WIDTH, {0.35, 0.35, 0.35, 1}, 20.5, false, 5)
-			TextDraw.DrawTextCentered(con6, SCREEN_WIDTH/2, 180, {0.28, 0.22, 0.34, 1}, font, 1.4)
+			DrawRectangle(CONLST_BASE + CONLST_GAP * 5, SCREEN_WIDTH, {0.35, 0.35, 0.35, 1}, CONLST_GAP * 0.97, false, 5)
+			TextDraw.DrawTextCentered(con6, SCREEN_WIDTH/2, CONLST_BASE + CONLST_NAME_DUNNO + CONLST_GAP * 5, {0.28, 0.22, 0.34, 1}, font, CONLST_NAME_S)
 		else
-			DrawRectangle(180, SCREEN_WIDTH, {0.14, 0.14, 0.14, 1}, 20.5, false, 5)
-		    TextDraw.DrawTextCentered(con6, SCREEN_WIDTH/2, 180, {0.72, 0.63, 0.81, 1}, font, 1.4)
+			DrawRectangle(CONLST_BASE + CONLST_GAP * 5, SCREEN_WIDTH, {0.14, 0.14, 0.14, 1}, CONLST_GAP * 0.97, false, 5)
+		    TextDraw.DrawTextCentered(con6, SCREEN_WIDTH/2, CONLST_BASE + CONLST_NAME_DUNNO + CONLST_GAP * 5, {0.72, 0.63, 0.81, 1}, font, CONLST_NAME_S)
 		end
 		if conselection == 7 then
-			DrawRectangle(200, SCREEN_WIDTH, {0.35, 0.35, 0.35, 1}, 20.5, false, 5)
-			TextDraw.DrawTextCentered(con7, SCREEN_WIDTH/2, 200, {0.28, 0.22, 0.34, 1}, font, 1.4)
+			DrawRectangle(CONLST_BASE + CONLST_GAP * 6, SCREEN_WIDTH, {0.35, 0.35, 0.35, 1}, CONLST_GAP * 0.97, false, 5)
+			TextDraw.DrawTextCentered(con7, SCREEN_WIDTH/2, CONLST_BASE + CONLST_NAME_DUNNO + CONLST_GAP * 6, {0.28, 0.22, 0.34, 1}, font, CONLST_NAME_S)
 		else
-			DrawRectangle(200, SCREEN_WIDTH, {0.14, 0.14, 0.14, 1}, 20.5, false, 5)
-			TextDraw.DrawTextCentered(con7, SCREEN_WIDTH/2, 200, {0.72, 0.63, 0.81, 1}, font, 1.4)
+			DrawRectangle(CONLST_BASE + CONLST_GAP * 6, SCREEN_WIDTH, {0.14, 0.14, 0.14, 1}, CONLST_GAP * 0.97, false, 5)
+			TextDraw.DrawTextCentered(con7, SCREEN_WIDTH/2, CONLST_BASE + CONLST_NAME_DUNNO + CONLST_GAP * 6, {0.72, 0.63, 0.81, 1}, font, CONLST_NAME_S)
 		end
 		--love.graphics.print("Check console for parsed output.", 10, 10)
 	elseif state == "title_screen" then
@@ -115,59 +138,63 @@ function draw_top_screen(dt)
 		--TextDraw.DrawTextCentered(parseurl(tree("h2")[1]:gettext()), SCREEN_WIDTH/2, 40, {1, 1, 1, 1}, font, 1) 
 		TextDraw.DrawTextCentered("Aktualności", SCREEN_WIDTH/2, 40, {1, 1, 1, 1}, font, HEADLINE_SCALE)
 		if kurwacoto_jest == 1 then
-			draw_widget(news1, BASE_PARAGRAPH_POS - REC_GAP, true)
+			draw_widget(news1, BASE_PARAGRAPH_POS + 45 - REC_GAP, true)
 		else
-			draw_widget(news1, BASE_PARAGRAPH_POS - REC_GAP, false)
+			draw_widget(news1, BASE_PARAGRAPH_POS + 45 - REC_GAP, false)
 		end
-		TextDraw.DrawTextCentered(date1, SCREEN_WIDTH/2, BASE_PARAGRAPH_POS + ADD_PARAGRAPH_POS, {0.72, 0.63, 0.81, 1}, font, PARAGRAPH_SCALE)
+		TextDraw.DrawTextCentered(date1, SCREEN_WIDTH/2, BASE_PARAGRAPH_POS + 45 + ADD_PARAGRAPH_POS, {0.72, 0.63, 0.81, 1}, font, PARAGRAPH_SCALE)
 		if kurwacoto_jest == 2 then
-			draw_widget(news2, BASE_PARAGRAPH_POS + BASE_GAP - REC_GAP, true)
+			draw_widget(news2, BASE_PARAGRAPH_POS + 45 + BASE_GAP - REC_GAP, true)
 		else
-			draw_widget(news2, BASE_PARAGRAPH_POS + BASE_GAP - REC_GAP, false)
+			draw_widget(news2, BASE_PARAGRAPH_POS + 45 + BASE_GAP - REC_GAP, false)
 		end
-		TextDraw.DrawTextCentered(date2, SCREEN_WIDTH/2, BASE_PARAGRAPH_POS + ADD_PARAGRAPH_POS + BASE_GAP, {0.72, 0.63, 0.81, 1}, font, PARAGRAPH_SCALE)
+		TextDraw.DrawTextCentered(date2, SCREEN_WIDTH/2, BASE_PARAGRAPH_POS + 45 + ADD_PARAGRAPH_POS + BASE_GAP, {0.72, 0.63, 0.81, 1}, font, PARAGRAPH_SCALE)
 		if kurwacoto_jest == 3 then
-			draw_widget(news3, BASE_PARAGRAPH_POS + (BASE_GAP * 2) - REC_GAP, true)
+			draw_widget(news3, BASE_PARAGRAPH_POS + 45 + (BASE_GAP * 2) - REC_GAP, true)
 		else
-			draw_widget(news3, BASE_PARAGRAPH_POS + (BASE_GAP * 2) - REC_GAP, false)
+			draw_widget(news3, BASE_PARAGRAPH_POS + 45 + (BASE_GAP * 2) - REC_GAP, false)
 		end
-		TextDraw.DrawTextCentered(date3, SCREEN_WIDTH/2, BASE_PARAGRAPH_POS + ADD_PARAGRAPH_POS + (BASE_GAP * 2), {0.72, 0.63, 0.81, 1}, font, PARAGRAPH_SCALE)
+		TextDraw.DrawTextCentered(date3, SCREEN_WIDTH/2, BASE_PARAGRAPH_POS + 45 + ADD_PARAGRAPH_POS + (BASE_GAP * 2), {0.72, 0.63, 0.81, 1}, font, PARAGRAPH_SCALE)
 	elseif state == "relacje" then
 		--TextDraw.DrawTextCentered(parseurl(tree("h2")[1]:gettext()), SCREEN_WIDTH/2, 40, {1, 1, 1, 1}, font, 1) 
 		TextDraw.DrawTextCentered("Relacje z Konwentów", SCREEN_WIDTH/2, 40, {1, 1, 1, 1}, font, HEADLINE_SCALE)
 		if kurwacoto_jest == 1 then
-			draw_widget(rel1, BASE_PARAGRAPH_POS - REC_GAP, true)
+			draw_widget(rel1, BASE_PARAGRAPH_POS + 45 - REC_GAP, true)
 		else
-			draw_widget(rel1, BASE_PARAGRAPH_POS - REC_GAP, false)
+			draw_widget(rel1, BASE_PARAGRAPH_POS + 45 - REC_GAP, false)
 		end
-		TextDraw.DrawTextCentered(date1, SCREEN_WIDTH/2, BASE_PARAGRAPH_POS + ADD_PARAGRAPH_POS, {0.72, 0.63, 0.81, 1}, font, PARAGRAPH_SCALE)
+		TextDraw.DrawTextCentered(date1, SCREEN_WIDTH/2, BASE_PARAGRAPH_POS + 45 + ADD_PARAGRAPH_POS, {0.72, 0.63, 0.81, 1}, font, PARAGRAPH_SCALE)
 		if kurwacoto_jest == 2 then
-			draw_widget(rel2, BASE_PARAGRAPH_POS + BASE_GAP - REC_GAP, true)
+			draw_widget(rel2, BASE_PARAGRAPH_POS + 45 + BASE_GAP - REC_GAP, true)
 		else
-			draw_widget(rel2, BASE_PARAGRAPH_POS + BASE_GAP - REC_GAP, false)
+			draw_widget(rel2, BASE_PARAGRAPH_POS + 45 + BASE_GAP - REC_GAP, false)
 		end
-		TextDraw.DrawTextCentered(date2, SCREEN_WIDTH/2, BASE_PARAGRAPH_POS + ADD_PARAGRAPH_POS + BASE_GAP, {0.72, 0.63, 0.81, 1}, font, PARAGRAPH_SCALE)
+		TextDraw.DrawTextCentered(date2, SCREEN_WIDTH/2, BASE_PARAGRAPH_POS + 45 + ADD_PARAGRAPH_POS + BASE_GAP, {0.72, 0.63, 0.81, 1}, font, PARAGRAPH_SCALE)
 		if kurwacoto_jest == 3 then
-			draw_widget(rel3, BASE_PARAGRAPH_POS + (BASE_GAP * 2) - REC_GAP, true)
+			draw_widget(rel3, BASE_PARAGRAPH_POS + 45 + (BASE_GAP * 2) - REC_GAP, true)
 		else
-			draw_widget(rel3, BASE_PARAGRAPH_POS + (BASE_GAP * 2) - REC_GAP, false)
+			draw_widget(rel3, BASE_PARAGRAPH_POS + 45 + (BASE_GAP * 2) - REC_GAP, false)
 		end
-		TextDraw.DrawTextCentered(date3, SCREEN_WIDTH/2, BASE_PARAGRAPH_POS + ADD_PARAGRAPH_POS + (BASE_GAP * 2), {0.72, 0.63, 0.81, 1}, font, PARAGRAPH_SCALE)
+		TextDraw.DrawTextCentered(date3, SCREEN_WIDTH/2, BASE_PARAGRAPH_POS + 45 + ADD_PARAGRAPH_POS + (BASE_GAP * 2), {0.72, 0.63, 0.81, 1}, font, PARAGRAPH_SCALE)
 	elseif state == "article" then
-		if MOVE_PAGE >= -24 then
+		if MOVE_PAGE >= -36 then
 			DrawRectangle(-20, SCREEN_WIDTH + 10, {0.26, 0.14, 0.31, 1}, (TextDraw.GetTextHeight(pagetitle, font, 1.3) * 4.3), false, 0)
-			TextDraw.DrawTextCentered(pagetitle, SCREEN_WIDTH/2, 10, {1, 1, 1, 1}, font, 1.3)
+			TextDraw.DrawTextCentered(pagetitle, SCREEN_WIDTH/2, 10, {1, 1, 1, 1}, font, ART_TITLE)
 		end
-		TextDraw.DrawText(ART_PARS, 0, BASE_PARAGRAPH_POS + MOVE_PAGE, {1, 1, 1, 1}, font, 1)
+		TextDraw.DrawText(ART_PARS, 0, BASE_PARAGRAPH_POS + MOVE_PAGE, {1, 1, 1, 1}, font, ART_CONTEXTKURWANWM)
+		if testimage ~= nil then
+			love.graphics.draw(testimage, 0, BASE_PARAGRAPH_POS + MOVE_PAGE + 29 * newline_count, 0, 1.2, 1.2)
+		end
+
 	elseif state == "con_info" then
-		TextDraw.DrawTextCentered(tree("#event-hdr")[1]:getcontent(), SCREEN_WIDTH/2, 40, {1, 1, 1, 1}, font, 1.2)
-		TextDraw.DrawTextCentered(tree("#conv-date")[1]:getcontent(), SCREEN_WIDTH/2, 80, {1, 1, 1, 1}, font, 1)
-		TextDraw.DrawTextCentered(tree("#conv-address")[1]:getcontent(), SCREEN_WIDTH/2, 100, {1, 1, 1, 1}, font, 1)
-		TextDraw.DrawTextCentered("Opis:", SCREEN_WIDTH/2, 130, {1, 1, 1, 1}, font, 1)
-		TextDraw.DrawTextCentered(TextDraw.GetWrappedText(cut_eventdesc, font, SCREEN_WIDTH, 1), SCREEN_WIDTH/2, 150, {1, 1, 1, 1}, font, 1)
+		TextDraw.DrawTextCentered(tree("#event-hdr")[1]:getcontent(), SCREEN_WIDTH/2, 40 * ART_TITLE, {1, 1, 1, 1}, font, ART_TITLE)
+		TextDraw.DrawTextCentered(tree("#conv-date")[1]:getcontent(), SCREEN_WIDTH/2, 80 * ART_CONTEXTKURWANWM, {1, 1, 1, 1}, font, ART_CONTEXTKURWANWM)
+		TextDraw.DrawTextCentered(tree("#conv-address")[1]:getcontent(), SCREEN_WIDTH/2, 100 * ART_CONTEXTKURWANWM, {1, 1, 1, 1}, font, ART_CONTEXTKURWANWM)
+		TextDraw.DrawTextCentered("Opis:", SCREEN_WIDTH/2, 130 * ART_CONTEXTKURWANWM, {1, 1, 1, 1}, font, ART_CONTEXTKURWANWM)
+		TextDraw.DrawTextCentered(TextDraw.GetWrappedText(cut_eventdesc, font, SCREEN_WIDTH, ART_CONTEXTKURWANWM), SCREEN_WIDTH/2, 150 * ART_CONTEXTKURWANWM, {1, 1, 1, 1}, font, ART_CONTEXTKURWANWM)
 		--TextDraw.DrawTextCentered(tree("p")[3]:getcontent(), SCREEN_WIDTH/2, 150, {1, 1, 1, 1}, font, 1)
 	elseif state == "con_desc" then
-		TextDraw.DrawTextCentered(TextDraw.GetWrappedText(event_desc, font, SCREEN_WIDTH, 1), SCREEN_WIDTH/2, 10, {1, 1, 1, 1}, font, 1)
+		TextDraw.DrawTextCentered(TextDraw.GetWrappedText(event_desc, font, SCREEN_WIDTH, ART_CONTEXTKURWANWM), SCREEN_WIDTH/2, 10, {1, 1, 1, 1}, font, ART_CONTEXTKURWANWM)
 	end
 end
 
@@ -202,17 +229,60 @@ function draw_bottom_screen(dt)
 end
 local function extract_p_tags(html)
     local paragraphs = {}
-    for p in html:gmatch("<p>(.-)</p>") do
-        table.insert(paragraphs, "<p>" .. p .. "</p>")
-    end
+	if html:gmatch("<p>(.-)</p>") then
+		for p in html:gmatch("<p>(.-)</p>") do
+			table.insert(paragraphs, "<p>" .. p .. "</p>")
+		end
+	elseif html:gmatch("<p (.-)>(.-)</p>") then
+		for p in html:gmatch("<p (.-)>(.-)</p>") do
+			table.insert(paragraphs, "<p (.-)>" .. p .. "</p>")
+		end
+	end
     return table.concat(paragraphs, "\n")
 end
+
+-- Function to decode HTML entities
+function decode_html_entities(str)
+    -- Replace known HTML entities with their characters
+    str = str:gsub("&quot;", "\"")
+    str = str:gsub("&amp;", "&")
+    str = str:gsub("&lt;", "<")
+    str = str:gsub("&gt;", ">")
+    str = str:gsub("&nbsp;", " ")  -- Convert nbsp to a regular space
+    return str
+end
+
+-- Function to parse the article
 function parsearticle(xml_to_parse)
-	local str = xml_to_parse
-	
-	local output = extract_p_tags(str):gsub("<br/>", ""):gsub("<noscript>", ""):gsub("</noscript>", ""):gsub("<img.-/>", ""):gsub("<p>", ""):gsub("</p>", " "):gsub("<", ""):gsub("strong", ""):gsub("a href=[^>]+", ""):gsub("&amp;", ""):gsub("%(", ""):gsub("%)", ""):gsub("&nbsp;", " "):gsub("/%a", ""):gsub("%a/", ""):gsub("/", ""):gsub(">", "")
-	
-	return output
+    local str = xml_to_parse
+    
+    -- Step 1: Decode HTML entities
+    str = decode_html_entities(str)
+	--print(str)
+    -- Step 2: Process the content
+    local output = str
+		:gsub('<div class="tags">.-</div>', "") 
+        :gsub("<br%s*/?>", "\n")                -- Replace <br> tags with newlines
+        :gsub("<noscript>", ""):gsub("</noscript>", "") -- Remove <noscript> tags
+        :gsub("<a href=[^>]+>(.-)</a>", "%1")  -- Remove links but keep their text
+        :gsub("<strong>(.-)</strong>", "%1")   -- Keep bolded content without tags
+        :gsub("<li>", "- ")                     -- Handle <li> tags as list items (with a dash)
+        :gsub("</li>", "\n")                    -- Replace closing </li> tag with a newline
+        :gsub("<ul>", "\n")                     -- Start unordered list with a newline (optional)
+        :gsub("</ul>", "\n")                    -- End unordered list with a newline (optional)
+        :gsub("<p>", "\n")                      -- Replace <p> with newline
+        :gsub("</p>", "\n")                     -- Replace </p> with newline
+        :gsub("<.->", "")                      -- Remove any other remaining tags
+        :gsub("\r", "")                        -- Remove carriage returns (optional, depends on source)
+        :gsub("\n%s*\n", "\n\n")               -- Clean up extra newlines
+        :gsub("^%s+", "")                      -- Trim leading whitespace
+        :gsub("%s+$", "")                      -- Trim trailing whitespace
+		:gsub("Facebook Social Comments", "")
+	print("https://konwenty-poludniowe.pl" .. string.match(tree(".content img[data-src]")[1]:gettext(), 'data%-src="([^"]+)"'))
+	if state == "main_strona" then
+		downloadimage("https://konwenty-poludniowe.pl/" .. string.match(tree(".content img[data-src]")[1]:gettext(), 'data%-src="([^"]+)"'))
+	end
+    return output
 end
 
 function parseparagraphs(xml_to_parse)
@@ -229,7 +299,18 @@ function parseurl(xml_to_parse)
 	local url_path = str:match('href="(.-)"')
 	return url_path
 end
-
+function downloadimage(url)
+	if love._console == "3DS" then
+		local data = json.encode({url = url})
+		refresh_data("https://api.szprink.xyz/t3x/convert", data, {["api-version"] = "4.4", ["application-id"] = "%C5%BCappka", ["user-agent"] = "Synerise Android SDK 5.9.0 pl.zabka.apb2c", ["accept"] = "application/json", ["mobile-info"] = "horizon;28;AW700000000;9;CTR-001;nintendo;5.9.0", ["content-type"] = "application/json"}, "POST")
+		local imageData = love.image.newImageData(love.filesystem.newFileData(image, "image.t3x"))
+		testimage = love.graphics.newImage(imageData)
+	else
+		refresh_data(url, "", {}, "GET")
+		local imageData = love.image.newImageData(love.filesystem.newFileData(image, "image.png"))
+		testimage = love.graphics.newImage(imageData)
+	end
+end
 function gotopage(reference)
 	refresh_data("https://konwenty-poludniowe.pl" .. reference)
 end
@@ -255,18 +336,28 @@ function refresh_data(url)
 
     -- Making the HTTP request
     code, body, headers = https.request(url, {method = "get", headers = {} })
-	
-    -- Your HTML string to parse
-    local html = body
+	if string.match(url, "jpg") then
+		image = body
+	else
+		-- Your HTML string to parse
+		local html = body
 
-    -- Parse the HTML
-    tree = htmlparser.parse(html)
+		-- Parse the HTML
+		tree = htmlparser.parse(html)
+	end
 	
 end
 function loadarticle()
+	MOVE_PAGE = -20
 	pagetitle = TextDraw.GetWrappedText((tree(".page-header h1 a")[1]:getcontent()), font, SCREEN_WIDTH, 1.3)
 	--love.filesystem.write("chuj.txt", parsearticle(tree(".content")[1]:getcontent()))
-	ART_PARS = TextDraw.GetWrappedText(parsearticle(tree(".content")[1]:getcontent()), font, SCREEN_WIDTH, 1)
+	ART_PARS = TextDraw.GetWrappedText(parsearticle(tree(".content")[1]:getcontent()), font, SCREEN_WIDTH, ART_CONTEXTKURWANWM)
+	local function count_newlines(text)
+		local _, newline_count = text:gsub("\n", "") -- Match all `\n` and count them
+		return newline_count
+	end
+	newline_count = count_newlines(ART_PARS)
+	print(ART_PARS:gsub("\n", "\\n"))
 end
 function update_re_re_kurwa_jak_jest_relacja_po_angielsku()
 	rel1 = limitchar(tree(".page-header h2 a")[additional_offset]:getcontent())
@@ -300,19 +391,26 @@ function love.draw(screen)
 end 
 
 function love.gamepadpressed(joystick, button)
+	print(state)
 	if button == "b" then
 		if mode_sel == 1 then 
 			refresh_data("https://konwenty-poludniowe.pl")
+			REFRESHED = 1
 			update_news()
 			state = "main_strona"
 		else
 			refresh_data("https://konwenty-poludniowe.pl/konwenty/relacje-z-konwentow?start=" .. rel_offset)
+			REFRESHED = 1
 			update_re_re_kurwa_jak_jest_relacja_po_angielsku()
 			state = "relacje"
 		end
 	end
 	if button == "y" then
-		refresh_data("https://konwenty-poludniowe.pl/konwenty/kalendarz")
+		if REFRESHED == 0 then
+			refresh_data("https://konwenty-poludniowe.pl/konwenty/kalendarz")
+			REFRESHED = 1
+		end
+		print(bgx .. " " .. bgy)
 		--con1 = tree("#upcoming_events li a")[1]:getcontent()
 		con1 = tree("#upcoming_events li a")[1]:getcontent()
 		con2 = tree("#upcoming_events li a")[2]:getcontent()
@@ -389,15 +487,23 @@ function love.gamepadpressed(joystick, button)
 		if button == "a" then
 			if state == "main_strona" then	
 				gotopage(parseurl(tree(".item-title a")[selection]:gettext()))
-				loadarticle()
+				REFRESHED = 1
+				loadarticle() 
 				state = "article"
 			elseif state == "lista_kon" then
 				gotopage(parseurl(tree("#upcoming_events li")[conurl]:gettext()))
-				cut_eventdesc = tree(".event_description p")[1]:getcontent()
-				event_desc = parsearticle(tree(".event_description")[1]:getcontent())
+				REFRESHED = 1
+				if string.match(tree(".content")[1]:getcontent(), "event_description") then
+					cut_eventdesc = tree(".event_description p")[1]:getcontent()
+					event_desc = parsearticle(tree(".event_description")[1]:getcontent())
+				else 
+					cut_eventdesc = "Brak Opisu"
+					event_desc = "Brak Opisu"
+				end
 				state = "con_info"
 			elseif state == "relacje" then
 				gotopage(parseurl(tree(".page-header h2 a")[selection]:gettext()))
+				REFRESHED = 1
 				loadarticle()
 				state = "article"
 			end
@@ -435,6 +541,13 @@ end
 
 
 function love.update(dt)
+	if bgy <= 0 then
+		bgx = bgx + 0.255
+		bgy = bgy + 0.3 
+	else
+		bgx = -120
+		bgy = -180
+	end
 	if state == "article" then
 		local joystick = love.joystick.getJoysticks()[1]
 		if joystick then 
@@ -442,6 +555,14 @@ function love.update(dt)
 				MOVE_PAGE = MOVE_PAGE + player_speed * dt
 			end
 			if joystick:isGamepadDown("dpdown") then
+				MOVE_PAGE = MOVE_PAGE - player_speed * dt
+			end
+		end
+		if love._potion_version == nil then
+			if love.keyboard.isDown("up") then
+				MOVE_PAGE = MOVE_PAGE + player_speed * dt
+			end
+			if love.keyboard.isDown("down") then
 				MOVE_PAGE = MOVE_PAGE - player_speed * dt
 			end
 		end

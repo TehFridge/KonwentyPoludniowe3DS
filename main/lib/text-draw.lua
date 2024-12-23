@@ -5,21 +5,38 @@ function TextDraw.GetWrappedText(text, font, width, scale)
     scale = scale or 1
     text = tostring(text)
     local font = font or love.graphics.getFont()
+    
     local newString = ""
     local line = ""
-    for word in text:gmatch("%S+") do
-        local testLine = line .. word .. " "
-        local testWidth = TextDraw.GetTextWidth(testLine, font, scale)
-        if testWidth > width then
-            newString = newString .. line .. "\n"
-            line = word .. " "
-        else
-            line = testLine
+    
+    -- Iterate through the text, including handling existing newlines
+    for word in text:gmatch("[^\n]+") do  -- Split by newlines
+        local lineToProcess = word
+        
+        -- Split the current segment into words if no newline
+        for word in lineToProcess:gmatch("%S+") do
+            local testLine = line .. word .. " "
+            local testWidth = TextDraw.GetTextWidth(testLine, font, scale)
+            
+            -- If the line exceeds the width, add a newline
+            if testWidth > width then
+                newString = newString .. line .. "\n"
+                line = word .. " "
+            else
+                line = testLine
+            end
         end
+        
+        -- If the current word section had a newline, add it
+        newString = newString .. line .. "\n"
+        line = ""
     end
+    
+    -- Final line (in case there's remaining text)
     newString = newString .. line
     return newString
 end
+
 function TextDraw.DrawText(text, x, y, color, font, scale)
     local font = font or love.graphics.getFont()
     local scale = scale or 1
